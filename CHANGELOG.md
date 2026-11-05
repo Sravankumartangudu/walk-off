@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.1 (2026-11-05)
+
+- Wakes the screen faster when you're back: while the Mac is locked it looks 10 times a second (was 4)
+  and wakes on the picture that sees you, not on the next second. That gives your Apple Watch time to
+  unlock before you reach for Touch ID.
+- Someone walking past a locked screen holds the next wake back for 20 s (was 60 s).
+- Writes its decisions to the Mac's log (lock, unlock, faces seen while locked, wake), so a missed lock
+  or wake can be explained. No pictures are logged.
+- Stops asking macOS about camera permission every second while the camera is already running.
+
 ## 1.0.0 (2026-11-05)
 
 First release.

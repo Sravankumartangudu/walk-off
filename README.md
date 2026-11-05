@@ -104,6 +104,8 @@ after each rebuild.
 | It locks while I'm sitting there | Open **Camera check**. If your box is grey, choose **Faces that count › Same room**. Dim light can hide a face too |
 | It doesn't lock when I leave | Someone else in view? Their face counts. Use **Close**. Also check you're not paused (🙈) |
 | The screen doesn't wake when I come back | Turn on **Wake the screen when I'm back**. It only watches for the **Watch for me after locking** time after a lock |
+| The screen wakes but stays locked | Expected: Walk Off never unlocks. Turn on **System Settings › Touch ID & Password › Apple Watch** and wait 1–2 s after the screen lights up. Touching Touch ID straight away cancels the Watch |
+| I want to see why it did (or didn't) lock or wake | Run `log show --last 1h --style compact --predicate 'subsystem == "com.stangudu.walkoff"'` in Terminal |
 | My iPhone's camera turned on | Pick the built-in camera under 👀 › Camera |
 
 ## Privacy

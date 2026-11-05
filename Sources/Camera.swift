@@ -24,10 +24,15 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     private let queue = DispatchQueue(label: "com.stangudu.walkoff.camera")
     private let ci = CIContext()
     private var deviceID: String?
+    /// The camera `start` was last asked for while it's running, so repeat calls cost nothing.
+    private var runningFor: String?
     private var asking = false
+    private var rate: Double = 4
     // Only touched on `queue`.
     private var lastPicture: CFTimeInterval = 0
     private var pictures = false
+    private var looksPerSecond: Double = 4
+    private var lastVisionError: CFTimeInterval = -.infinity
 
     /// Cameras on this Mac. The iPhone (Continuity Camera) is listed but never picked by default,
     /// because opening it takes over the phone.
@@ -45,6 +50,7 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     }
 
     func start(_ id: String) {
+        if isOn && runningFor == id && problem == nil { return }
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .notDetermined:
             problem = "Waiting for camera permission"
@@ -68,11 +74,13 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             return
         }
         problem = nil
+        runningFor = id
         if isOn && deviceID == dev.uniqueID { return }
         isOn = true
         deviceName = dev.localizedName
         let switching = deviceID != dev.uniqueID
         deviceID = dev.uniqueID
+        Log.camera.notice("Camera on: \(dev.localizedName, privacy: .public)")
         queue.async { [self] in
             if switching { configure(dev) }
             if !session.isRunning { session.startRunning() }
@@ -82,7 +90,17 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     func stop() {
         guard isOn else { return }
         isOn = false
+        runningFor = nil
+        Log.camera.notice("Camera off")
         queue.async { [self] in if session.isRunning { session.stopRunning() } }
+    }
+
+    /// How many pictures a second go through the face finder. More while the screen is locked,
+    /// so the screen wakes the moment you're back.
+    func lookRate(_ perSecond: Double) {
+        guard perSecond != rate else { return }
+        rate = perSecond
+        queue.async { [self] in looksPerSecond = perSecond }
     }
 
     /// Pictures for the Camera check window, at a smoother rate.
@@ -110,13 +128,18 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         let now = CACurrentMediaTime()
-        // 4 looks a second is plenty to notice you; the preview gets 12 so it doesn't stutter.
-        guard now - lastPicture >= (pictures ? 1.0 / 12 : 1.0 / 4),
+        // 4 looks a second is plenty to notice you leave; the preview gets 12 so it doesn't stutter.
+        guard now - lastPicture >= 1.0 / max(pictures ? 12 : 0, looksPerSecond),
               let pixels = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         lastPicture = now
 
         let request = VNDetectFaceRectanglesRequest()
-        try? VNImageRequestHandler(cvPixelBuffer: pixels, orientation: .up).perform([request])
+        do {
+            try VNImageRequestHandler(cvPixelBuffer: pixels, orientation: .up).perform([request])
+        } catch where now - lastVisionError > 10 {
+            lastVisionError = now
+            Log.camera.error("Face finder failed: \(error.localizedDescription, privacy: .public)")
+        } catch {}
         let faces = (request.results ?? []).map { SeenFace(box: $0.boundingBox) }
 
         var image: CGImage?

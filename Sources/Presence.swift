@@ -47,7 +47,7 @@ final class Presence {
     /// Frames in a row with a face before waking, so a passing glance doesn't.
     static let framesToWake = 3
     /// After a wake, wait this long before waking again (you might be busy on your phone).
-    static let wakeCooldown: Double = 60
+    static let wakeCooldown: Double = 20
     /// The camera counts as stuck after this long without a picture.
     static let stallAfter: Double = 8
 
@@ -64,6 +64,9 @@ final class Presence {
     private var faceStreak = 0
     private var lastWake: Double = -.infinity
     private var lastTick: Double?
+
+    /// For the log: what the wake check is waiting for.
+    var trace: String { "ready to wake: \(armed), faces in a row: \(faceStreak)" }
 
     /// One processed camera picture. `faces` counts only faces close enough to count.
     func frame(at t: Double, faces: Int) {

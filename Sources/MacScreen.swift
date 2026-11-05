@@ -41,7 +41,11 @@ enum MacScreen {
     /// Turns the display on, as if you'd touched a key. The lock screen stays locked.
     static func wake() {
         var id: IOPMAssertionID = 0
-        guard IOPMAssertionDeclareUserActivity("Walk Off: you're back" as CFString, kIOPMUserActiveLocal, &id) == kIOReturnSuccess else { return }
+        let result = IOPMAssertionDeclareUserActivity("Walk Off: you're back" as CFString, kIOPMUserActiveLocal, &id)
+        guard result == kIOReturnSuccess else {
+            Log.presence.error("Couldn't wake the screen (IOKit error \(result))")
+            return
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) { IOPMAssertionRelease(id) }
     }
 

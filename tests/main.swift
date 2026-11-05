@@ -133,6 +133,26 @@ do {
     check(s.wakes.count == 1, "one wake, not one per minute (got \(s.wakes))")
 }
 
+// At 10 looks a second (the locked rate) three faces in a row take under a second.
+do {
+    let s = Sim()
+    s.locked = true
+    s.run(until: 20, face: { _ in false }, framesPerSecond: 10)
+    s.run(until: 40, face: { t in t >= 30 }, framesPerSecond: 10)
+    if let w = s.wakes.first { check(w <= 31, "wakes within a second at 10 looks a second (at \(w))") } else { check(false, "should wake") }
+}
+
+// Someone passing a locked screen doesn't use up the wake for long: leave and come back 30s later, it wakes again.
+do {
+    let s = Sim()
+    s.locked = true
+    s.run(until: 10) { _ in false }
+    s.run(until: 13) { _ in true }
+    s.run(until: 40) { _ in false }
+    s.run(until: 50) { _ in true }
+    check(s.wakes.count == 2, "wakes again after a short walk-by (got \(s.wakes))")
+}
+
 // Wake off, or past the watch window: camera rests.
 do {
     var r = Rules(); r.wakeOnReturn = false

@@ -18,6 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var wakesToday = 0
 
     private var now: Double { Date().timeIntervalSinceReferenceDate }
+    private var lastWatchLog: Double = 0
+    private var loggedLocked: Bool?
+    private var loggedStatus: Status?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         // A login item is opened with this flag; don't pop the welcome window at login.
@@ -51,7 +54,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         camera.onFrame = { [weak self] faces, image in
             guard let self else { return }
             let min = self.prefs.distance.minHeight
-            self.presence.frame(at: self.now, faces: faces.filter { $0.box.height >= min }.count)
+            let counted = faces.filter { $0.box.height >= min }.count
+            self.presence.frame(at: self.now, faces: counted)
+            if self.presence.status == .away {
+                if self.now - self.lastWatchLog >= 1 {
+                    self.lastWatchLog = self.now
+                    let biggest = faces.map(\.box.height).max() ?? 0
+                    Log.presence.notice("Watching: \(faces.count) face(s), biggest \(biggest, format: .fixed(precision: 2)), \(counted) close enough; \(self.presence.trace, privacy: .public)")
+                }
+                // Decide on this picture rather than the next second's tick.
+                self.tick()
+            }
             var text = self.statusText
             if self.presence.status == .here || self.presence.status == .seenYou {
                 text = "You're here. The camera turns off when you close this window"
@@ -104,6 +117,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let locked = MacScreen.isLocked
         let action = presence.tick(now: now, idle: MacScreen.idleSeconds, locked: locked,
                                    enabled: prefs.enabled, paused: paused, cameraProblem: camera.problem)
+        if locked != loggedLocked {
+            loggedLocked = locked
+            Log.presence.notice("Screen \(locked ? "locked" : "unlocked", privacy: .public)")
+        }
+        if presence.status != loggedStatus {
+            loggedStatus = presence.status
+            Log.presence.notice("Status: \(self.statusText, privacy: .public)")
+        }
+        camera.lookRate(presence.status == .away ? 10 : 4)
 
         if presence.cameraWanted || check.isOpen {
             camera.start(prefs.camera)
@@ -119,12 +141,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         switch action {
         case .lock:
+            Log.presence.notice("Locking: no face for \(Int(self.prefs.rules.leaveAfter))s")
             locksToday += 1
             MacScreen.lock()
             if prefs.displayOff {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { MacScreen.displayOff() }
             }
         case .wake:
+            Log.presence.notice("You're back: waking the screen")
             wakesToday += 1
             MacScreen.wake()
         case .none:
@@ -317,6 +341,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     @objc private func openCheck() { check.show() }
     @objc private func lockNow() {
+        Log.presence.notice("Locking: Lock now")
         locksToday += 1
         MacScreen.lock()
     }
