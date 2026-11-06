@@ -129,6 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if locked != loggedLocked {
             loggedLocked = locked
             Log.presence.notice("Screen \(locked ? "locked" : "unlocked", privacy: .public)")
+            if !locked { MacScreen.unlocked() }
         }
         if presence.status != loggedStatus {
             loggedStatus = presence.status

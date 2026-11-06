@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3 (2026-11-06)
+
+- Fixes the Mac locking again a few seconds after your Apple Watch (or Touch ID) unlocked it. Walk Off
+  let go of its screen wake after 5 seconds; if you hadn't typed or clicked yet, macOS turned the
+  display off about 10 seconds later, and the display turning off locks the Mac. Walk Off now holds
+  the wake until you unlock (20 seconds at most), then keeps the display on for a minute.
+
 ## 1.0.2 (2026-11-06)
 
 - Locks 5 seconds after you walk away (was about 25). The countdown now starts at your last key press,

@@ -23,6 +23,7 @@ enum MacScreen {
     }()
 
     static func lock() {
+        releaseWake()
         if let lockFunction {
             _ = lockFunction()
         } else {
@@ -38,15 +39,49 @@ enum MacScreen {
         try? p.run()
     }
 
+    private static var wakeID: IOPMAssertionID?
+    private static var keepOnID: IOPMAssertionID?
+    /// How long a wake keeps the lock screen lit if nobody unlocks.
+    private static let wakeHold: Double = 20
+    /// How long the display stays on after an unlock that followed a wake.
+    private static let keepOnAfterUnlock: Double = 60
+
     /// Turns the display on, as if you'd touched a key. The lock screen stays locked.
+    /// Held until you unlock (or `wakeHold`): letting go early makes macOS turn the display off
+    /// about 10 seconds later, which locks the Mac again right after your watch unlocked it.
     static func wake() {
+        releaseWake()
         var id: IOPMAssertionID = 0
         let result = IOPMAssertionDeclareUserActivity("Walk Off: you're back" as CFString, kIOPMUserActiveLocal, &id)
         guard result == kIOReturnSuccess else {
             Log.presence.error("Couldn't wake the screen (IOKit error \(result))")
             return
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { IOPMAssertionRelease(id) }
+        wakeID = id
+        DispatchQueue.main.asyncAfter(deadline: .now() + wakeHold) {
+            if wakeID == id, isLocked { releaseWake() }
+        }
+    }
+
+    /// The screen just unlocked. If Walk Off woke it, keep the display on for a minute before
+    /// handing back to the normal display-sleep timer, so it doesn't go dark and lock again.
+    static func unlocked() {
+        guard wakeID != nil else { return }
+        var id: IOPMAssertionID = 0
+        if IOPMAssertionCreateWithName(kIOPMAssertPreventUserIdleDisplaySleep as CFString, IOPMAssertionLevel(kIOPMAssertionLevelOn),
+                                       "Walk Off: you just unlocked" as CFString, &id) == kIOReturnSuccess {
+            keepOnID = id
+            DispatchQueue.main.asyncAfter(deadline: .now() + keepOnAfterUnlock) {
+                if keepOnID == id { IOPMAssertionRelease(id); keepOnID = nil }
+            }
+        }
+        if let w = wakeID { IOPMAssertionRelease(w); wakeID = nil }
+    }
+
+    /// Lets the display sleep as normal: on a lock, or when a wake wasn't followed by an unlock.
+    static func releaseWake() {
+        if let w = wakeID { IOPMAssertionRelease(w); wakeID = nil }
+        if let k = keepOnID { IOPMAssertionRelease(k); keepOnID = nil }
     }
 
     static func openTouchIDSettings() {
