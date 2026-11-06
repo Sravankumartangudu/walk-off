@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.2 (2026-11-06)
+
+- Locks 5 seconds after you walk away (was about 25). The countdown now starts at your last key press,
+  mouse move or face, not when the camera turns on. The camera turns on after 3 s quiet (was 15) and
+  rests 5 s after seeing you (was 10). It still needs 2 s of seeing nobody before it locks.
+- Opens at login by default, so a restart or log out doesn't quietly leave the Mac unguarded. Switch it
+  off in the menu and it stays off.
+- Logs the version and the Open at login state when it starts.
+
 ## 1.0.1 (2026-11-05)
 
 - Wakes the screen faster when you're back: while the Mac is locked it looks 10 times a second (was 4)

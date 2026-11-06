@@ -30,10 +30,11 @@ Walk Off wakes the screen as you sit down, your watch unlocks it.
 ## How it works
 
 1. **You're typing or using the mouse:** the camera is off.
-2. **You go quiet for 15 seconds:** the camera turns on and looks for a face close to the Mac.
-3. **It sees you:** the camera turns off again and checks back every 10 seconds while you stay quiet.
+2. **You go quiet for 3 seconds:** the camera turns on and looks for a face close to the Mac.
+3. **It sees you:** the camera turns off again and checks back every 5 seconds while you stay quiet.
    You can read, watch or think without the Mac locking.
-4. **No face for 10 seconds:** the Mac locks and the display turns off.
+4. **5 seconds after your last key press, mouse move or face:** the Mac locks and the display turns off.
+   The camera must have seen nobody for at least 2 seconds first, so a glance at your phone doesn't count.
 5. **While locked (up to 30 minutes):** once the screen has been empty for a few seconds, a face that
    stays for a moment wakes the display. The Mac is still locked: you unlock it as usual.
 
@@ -59,9 +60,9 @@ Everything is in the 👀 menu (🙈 = off or paused, 👀⚠️ = camera proble
 |---|---|---|
 | Lock when I walk away | Turns Walk Off on or off | On |
 | Pause | 15 minutes, 1 hour, until tomorrow (6 AM) or until you resume | — |
-| Start looking after idle | How long you must be quiet before the camera turns on | 15 seconds |
-| Lock after you've gone for | How long without a face before it locks | 10 seconds |
-| Camera while you're idle | Peek every 10 s or 30 s, or keep it on (faster lock, camera light stays on) | Peek every 10 s |
+| Start looking after idle | How long you must be quiet before the camera turns on | 3 seconds |
+| Lock after you've gone for | How long after your last key press, mouse move or face it locks | 5 seconds |
+| Camera while you're idle | Peek every 5 s, 10 s or 30 s, or keep it on (always locks 5 s after you go; camera light stays on) | Peek every 5 s |
 | Faces that count | Close (about 1.5 m), same room (about 3 m), or anywhere in view. Keeps someone walking past behind you from counting as you | Close |
 | Turn the display off after locking | Saves power once it has locked | On |
 | Wake the screen when I'm back | Watches for you while locked | On |
@@ -70,7 +71,7 @@ Everything is in the 👀 menu (🙈 = off or paused, 👀⚠️ = camera proble
 | Camera check… | Live preview: green box = counts, grey box = too far away | — |
 | Lock now | Locks straight away | — |
 | Appearance | System, Light or Dark | System |
-| Open at login | Starts Walk Off when you log in | Off |
+| Open at login | Starts Walk Off when you log in, so a restart doesn't switch it off | On |
 
 **Tips**
 - Watching a film from the sofa? Choose **Faces that count › Same room**, or **Pause** for an hour.

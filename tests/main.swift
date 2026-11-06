@@ -55,20 +55,28 @@ do {
     check(onSeconds < 600 / 5, "camera mostly off while you're there (on \(onSeconds)s)")
 }
 
-// Walking away: locks about idle + leave delay later.
+// Walking away: locks 5 seconds after the last key press.
 do {
     let s = Sim()
     s.run(until: 120) { _ in false }
     check(s.locks.count == 1, "locks once (got \(s.locks))")
-    if let l = s.locks.first { check(l >= 25 && l <= 28, "locks after ~15s idle + 10s gone (at \(l))") }
+    if let l = s.locks.first { check(l >= 5 && l <= 6, "locks ~5s after you go (at \(l))") }
 }
 
-// Leaving mid-read with peeks: locks within recheck + leave delay of leaving.
+// Old settings still add up: 15s idle + 10s gone locks at 17s, not 25s.
+do {
+    var r = Rules(); r.idleBeforeCheck = 15; r.leaveAfter = 10
+    let s = Sim(r)
+    s.run(until: 120) { _ in false }
+    if let l = s.locks.first { check(l >= 17 && l <= 18, "locks when the camera has looked 2s (at \(l))") } else { check(false, "should lock") }
+}
+
+// Leaving mid-read with peeks: locks within one camera rest + a few seconds of leaving.
 do {
     let s = Sim()
     s.run(until: 200) { t in t < 100 }
     check(s.locks.count == 1, "locks once after leaving")
-    if let l = s.locks.first { check(l > 100 && l <= 100 + 10 + 10 + 3, "locks soon after leaving at 100 (at \(l))") }
+    if let l = s.locks.first { check(l > 100 && l <= 100 + 5 + 3 + 1, "locks soon after leaving at 100 (at \(l))") }
 }
 
 // Continuous camera: locks leaveAfter after the last face.
@@ -76,16 +84,36 @@ do {
     var r = Rules(); r.recheckEvery = 0
     let s = Sim(r)
     s.run(until: 200) { t in t < 100 }
-    if let l = s.locks.first { check(l >= 110 && l <= 112, "continuous locks ~10s after last face (at \(l))") } else { check(false, "continuous should lock") }
+    if let l = s.locks.first { check(l >= 105 && l <= 106, "continuous locks ~5s after last face (at \(l))") } else { check(false, "continuous should lock") }
 }
 
 // A key press just before the lock would fire cancels it.
 do {
     let s = Sim()
-    s.run(until: 24) { _ in false }
+    s.run(until: 4) { _ in false }
     s.lastInput = s.t
-    s.run(until: 30) { _ in false }
+    s.run(until: 8) { _ in false }
     check(s.locks.isEmpty, "key press resets the countdown")
+    s.run(until: 20) { _ in false }
+    if let l = s.locks.first { check(l >= 9 && l <= 10, "then locks 5s after that key press (at \(l))") } else { check(false, "should lock") }
+}
+
+// Never on the camera's first look: a quiet minute, then the camera sees nobody, still waits 2s.
+do {
+    var r = Rules(); r.idleBeforeCheck = 60
+    let s = Sim(r)
+    s.run(until: 61) { _ in false }
+    check(s.locks.isEmpty, "no lock the moment the camera turns on (got \(s.locks))")
+    s.run(until: 70) { _ in false }
+    if let l = s.locks.first { check(l >= 62 && l <= 63, "locks after 2s of nobody (at \(l))") } else { check(false, "should lock") }
+}
+
+// Glancing away for a second while reading doesn't lock.
+do {
+    var r = Rules(); r.recheckEvery = 0
+    let s = Sim(r)
+    s.run(until: 120) { t in Int(t) % 10 != 0 }
+    check(s.locks.isEmpty, "a one-second glance away doesn't lock (got \(s.locks))")
 }
 
 // A broken camera never locks.
@@ -175,7 +203,7 @@ do {
     check(s.locks.count == 1, "locked")
     s.locked = false
     s.lastInput = s.t
-    s.run(until: 45) { _ in true }
+    s.run(until: 42) { _ in true }
     check(s.locks.count == 1 && s.p.status == .here, "fresh start after unlock")
 }
 

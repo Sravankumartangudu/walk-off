@@ -4,7 +4,8 @@
 //   You type or move the mouse     → camera off ("here").
 //   Idle for `idleBeforeCheck`     → camera on, looking for a face that's close enough.
 //   Face found                     → camera off again until `recheckEvery` (or stays on when that's 0).
-//   No face for `leaveAfter`       → lock.
+//   `leaveAfter` since the last key press, mouse move or face, and the camera has seen nobody
+//   for at least `emptyBeforeLock`  → lock.
 //   Locked                         → watch for `returnWatchFor`; once you've been gone a few seconds,
 //                                    a face that stays for a few frames wakes the screen.
 //
@@ -12,10 +13,11 @@
 import Foundation
 
 struct Rules: Equatable {
-    var idleBeforeCheck: Double = 15
-    var leaveAfter: Double = 10
+    var idleBeforeCheck: Double = 3
+    /// Counted from the last sign of you: a key press, a mouse move or a face.
+    var leaveAfter: Double = 5
     /// Seconds the camera rests after it has seen you. 0 keeps it on while you're idle.
-    var recheckEvery: Double = 10
+    var recheckEvery: Double = 5
     var wakeOnReturn = true
     var returnWatchFor: Double = 30 * 60
 }
@@ -50,6 +52,9 @@ final class Presence {
     static let wakeCooldown: Double = 20
     /// The camera counts as stuck after this long without a picture.
     static let stallAfter: Double = 8
+    /// The camera must see nobody for this long before a lock, however long you've been quiet,
+    /// so a dark first picture or a glance down at your phone doesn't lock you out.
+    static let emptyBeforeLock: Double = 2
 
     private var cameraOnSince: Double?
     private var windowStart: Double?
@@ -141,10 +146,10 @@ final class Presence {
             }
             if now - f < 2 { status = .seenYou; return .none }
         }
-        let goneSince = max(start, lastFace ?? start)
+        let emptyFor = now - max(start, lastFace ?? start)
+        let goneFor = now - max(now - idle, lastFace ?? -.infinity)
         status = .checking
-        // Idle must cover the whole empty stretch too, or a key press inside it would be ignored.
-        if now - goneSince >= rules.leaveAfter && idle >= now - goneSince && now - lastLock > 5 {
+        if goneFor >= rules.leaveAfter && emptyFor >= Self.emptyBeforeLock && now - lastLock > 5 {
             lastLock = now
             camera(false)
             status = .locking

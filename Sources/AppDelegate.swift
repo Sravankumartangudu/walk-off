@@ -92,6 +92,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         timer?.tolerance = 0.2
         tick()
 
+        // A lock guard that's gone after a restart is worse than none: you think you're covered.
+        if !prefs.loginDefaultSet {
+            prefs.loginDefaultSet = true
+            do { try SMAppService.mainApp.register() } catch {
+                Log.presence.error("Couldn't turn on Open at login: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        Log.presence.notice("Started \(AppInfo.version, privacy: .public), open at login: \(SMAppService.mainApp.status == .enabled)")
+
         if !prefs.welcomed && !launchedAtLogin { check.show() }
     }
 
@@ -141,7 +150,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         switch action {
         case .lock:
-            Log.presence.notice("Locking: no face for \(Int(self.prefs.rules.leaveAfter))s")
+            Log.presence.notice("Locking: no sign of you for \(Int(self.prefs.rules.leaveAfter))s")
             locksToday += 1
             MacScreen.lock()
             if prefs.displayOff {
@@ -219,13 +228,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
 
         menu.addItem(submenu("Start looking after idle", choices(
-            [(5, "5 seconds"), (10, "10 seconds"), (15, "15 seconds"), (30, "30 seconds"), (60, "1 minute"), (120, "2 minutes"), (300, "5 minutes")],
+            [(3, "3 seconds"), (5, "5 seconds"), (10, "10 seconds"), (15, "15 seconds"), (30, "30 seconds"), (60, "1 minute"), (120, "2 minutes"), (300, "5 minutes")],
             prefs.idleBeforeCheck, #selector(pickIdle(_:)))))
         menu.addItem(submenu("Lock after you've gone for", choices(
             [(5, "5 seconds"), (10, "10 seconds"), (20, "20 seconds"), (30, "30 seconds"), (60, "1 minute")],
             prefs.leaveAfter, #selector(pickLeave(_:)))))
         menu.addItem(submenu("Camera while you're idle", choices(
-            [(10, "Peek every 10 seconds"), (30, "Peek every 30 seconds"), (0, "Keep it on")],
+            [(5, "Peek every 5 seconds"), (10, "Peek every 10 seconds"), (30, "Peek every 30 seconds"), (0, "Keep it on")],
             prefs.recheckEvery, #selector(pickRecheck(_:)))))
         let dist = NSMenu()
         for d in Distance.allCases {

@@ -36,6 +36,8 @@ final class Prefs {
     /// AVCaptureDevice.uniqueID, or "" for the built-in camera.
     var camera: String { didSet { save(camera, "camera") } }
     var welcomed: Bool { didSet { save(welcomed, "welcomed") } }
+    /// Open at login is switched on once, on first run. After that the menu's choice stands.
+    var loginDefaultSet: Bool { didSet { save(loginDefaultSet, "loginDefaultSet") } }
     /// system | light | dark. Missing means system, like every other app in the fleet.
     var appearance: String { didSet { save(appearance, "appearance"); applyAppearance() } }
 
@@ -44,15 +46,16 @@ final class Prefs {
         func bool(_ k: String, _ def: Bool) -> Bool { d.object(forKey: k) == nil ? def : d.bool(forKey: k) }
         func num(_ k: String, _ def: Double) -> Double { d.object(forKey: k) == nil ? def : d.double(forKey: k) }
         enabled = bool("enabled", true)
-        idleBeforeCheck = num("idleBeforeCheck", 15)
-        leaveAfter = num("leaveAfter", 10)
-        recheckEvery = num("recheckEvery", 10)
+        idleBeforeCheck = num("idleBeforeCheck", 3)
+        leaveAfter = num("leaveAfter", 5)
+        recheckEvery = num("recheckEvery", 5)
         distance = Distance(rawValue: d.string(forKey: "distance") ?? "") ?? .close
         displayOff = bool("displayOff", true)
         wakeOnReturn = bool("wakeOnReturn", true)
         returnWatchMinutes = d.object(forKey: "returnWatchMinutes") == nil ? 30 : d.integer(forKey: "returnWatchMinutes")
         camera = d.string(forKey: "camera") ?? ""
         welcomed = bool("welcomed", false)
+        loginDefaultSet = bool("loginDefaultSet", false)
         appearance = d.string(forKey: "appearance") ?? "system"
     }
 
